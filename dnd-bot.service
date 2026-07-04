@@ -1,5 +1,5 @@
 [Unit]
-Description=Bot de D&D 5e para WhatsApp
+Description=Bot de D&D 5e para Telegram
 After=network-online.target
 Wants=network-online.target
 
@@ -7,11 +7,11 @@ Wants=network-online.target
 Type=simple
 # Ajuste o usuário e o caminho para onde você copiou o projeto na VM
 User=ubuntu
-WorkingDirectory=/home/ubuntu/dnd5e-whatsapp-bot
+WorkingDirectory=/home/ubuntu/dnd5e-telegram-bot
 ExecStart=/usr/bin/node index.js
 Restart=on-failure
 RestartSec=5
-EnvironmentFile=/home/ubuntu/dnd5e-whatsapp-bot/.env
+EnvironmentFile=/home/ubuntu/dnd5e-telegram-bot/.env
 
 [Install]
 WantedBy=multi-user.target
