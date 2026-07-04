@@ -1,0 +1,21 @@
+{
+  "name": "dnd5e-telegram-bot",
+  "version": "0.2.0",
+  "description": "Bot de Telegram para tirar dúvidas de D&D 5e e dar ideias de táticas, personagens, NPCs, histórias e equipamentos",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "chat": "node scripts/test-chat.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "groq-sdk": "^0.7.0",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
