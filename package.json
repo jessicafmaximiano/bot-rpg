@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "chat": "node scripts/test-chat.js"
+    "chat": "node scripts/test-chat.js",
+    "test": "node --test"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

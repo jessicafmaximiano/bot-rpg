@@ -2,17 +2,21 @@
 // Protege contra custo de API disparado por spam ou loop acidental.
 
 class RateLimiter {
-  constructor(limitPerMinute = 15) {
+  constructor(limitPerMinute = 15, now = Date.now) {
+    if (!Number.isInteger(limitPerMinute) || limitPerMinute <= 0) {
+      throw new RangeError('limitPerMinute deve ser um inteiro positivo');
+    }
     this.limit = limitPerMinute;
+    this.now = now;
     this.counters = new Map(); // jid -> { count, windowStart }
   }
 
   /** Retorna true se a mensagem pode passar, false se estourou o limite. */
   allow(jid) {
-    const now = Date.now();
+    const now = this.now();
     const entry = this.counters.get(jid);
 
-    if (!entry || now - entry.windowStart > 60_000) {
+    if (!entry || now - entry.windowStart >= 60_000) {
       this.counters.set(jid, { count: 1, windowStart: now });
       return true;
     }

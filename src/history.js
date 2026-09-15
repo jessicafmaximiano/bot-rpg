@@ -1,4 +1,4 @@
-// Memória de conversa por chat (JID do WhatsApp), com persistência simples
+// Memória de conversa por chat do Telegram, com persistência simples
 // em disco em JSON. Guarda só as últimas N trocas para controlar custo de
 // tokens e não deixar o histórico crescer sem limite.
 
@@ -8,22 +8,26 @@ const path = require("path");
 const DATA_DIR = path.join(__dirname, "..", "data");
 const HISTORY_FILE = path.join(DATA_DIR, "history.json");
 
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+function ensureDataDir(filePath) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
 class ConversationHistory {
-  constructor(maxTurns = 8) {
+  constructor(maxTurns = 8, filePath = HISTORY_FILE) {
+    if (!Number.isInteger(maxTurns) || maxTurns <= 0) {
+      throw new RangeError('maxTurns deve ser um inteiro positivo');
+    }
+    this.filePath = filePath;
     this.maxTurns = maxTurns;
     this.store = new Map(); // jid -> [{role, content}, ...]
     this._load();
   }
 
   _load() {
-    ensureDataDir();
-    if (fs.existsSync(HISTORY_FILE)) {
+    ensureDataDir(this.filePath);
+    if (fs.existsSync(this.filePath)) {
       try {
-        const raw = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
+        const raw = JSON.parse(fs.readFileSync(this.filePath, "utf-8"));
         for (const [jid, msgs] of Object.entries(raw)) {
           this.store.set(jid, msgs);
         }
@@ -34,11 +38,16 @@ class ConversationHistory {
   }
 
   _persist() {
-    ensureDataDir();
+    ensureDataDir(this.filePath);
     const obj = Object.fromEntries(this.store);
-    fs.writeFile(HISTORY_FILE, JSON.stringify(obj), (err) => {
-      if (err) console.warn("Falha ao salvar histórico:", err.message);
-    });
+    // Escrita síncrona e troca atômica evitam sobreposição entre saves
+    // dentro de um único processo. Não suporta múltiplas instâncias.
+    try {
+      fs.writeFileSync(this.filePath + '.tmp', JSON.stringify(obj));
+      fs.renameSync(this.filePath + '.tmp', this.filePath);
+    } catch (err) {
+      console.warn("Falha ao salvar histórico:", err.message);
+    }
   }
 
   get(jid) {

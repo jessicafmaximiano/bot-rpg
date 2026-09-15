@@ -1,108 +1,97 @@
-# Bot de D&D 5e para Telegram
+# Assistente de D&D 5e para Telegram
 
-Bot de Telegram que responde dúvidas de regras, dá ideias de táticas de combate, ajuda a criar personagens, NPCs, histórias/aventuras e sugere equipamentos — tudo para Dungeons & Dragons 5ª edição, em português.
+Bot em JavaScript e Node.js para consultar regras e criar ideias de personagens, encontros e aventuras. Integra a API do Telegram à Groq e acrescenta referências locais ao contexto do modelo.
 
-Usa a [API oficial de bots do Telegram](https://core.telegram.org/bots) (gratuita, sem risco de bloqueio) e a [API gratuita da Groq](https://console.groq.com/keys) (modelos abertos como Llama, sem cartão de crédito e sem cobrança) para gerar as respostas, com uma base de conhecimento de D&D 5e (regras, tabelas de XP, condições, itens mágicos etc.) injetada automaticamente no contexto quando relevante.
+## Capacidades implementadas
 
-> **Por que Groq (e não Gemini)?** O Google passou a exigir uma conta de faturamento vinculada (cartão cadastrado) mesmo para uso dentro da cota gratuita dos modelos mais novos do Gemini. A Groq mantém uma camada gratuita de verdade, sem pedir cartão.
+- Respostas por modelo de linguagem, com persona definida em `src/ai.js`.
+- Seleção de até três arquivos de referência por palavras-chave.
+- Histórico persistido por chat, limitado a um número configurável de turnos.
+- Lista opcional de usuários autorizados.
+- Limite de mensagens por minuto por conversa.
+- Divisão de respostas longas e tentativa de envio como texto puro quando o envio formatado falha.
 
-## Por que Telegram (e não WhatsApp)?
+## Organização
 
-Uma versão anterior deste projeto usava WhatsApp via Baileys (biblioteca não-oficial). A versão Telegram é melhor em praticamente tudo para este caso de uso: a API é oficial e gratuita, o bot tem identidade própria (não "vira" o seu número pessoal), não há risco de bloqueio de conta, não precisa de pareamento por QR Code, e a conexão é muito mais estável.
+| Caminho | Responsabilidade |
+| --- | --- |
+| `index.js` | Inicialização |
+| `src/telegram.js` | Mensagens, comandos e controle de acesso |
+| `src/ai.js` | Requisição à Groq e instruções do modelo |
+| `src/knowledge.js` | Seleção de contexto por palavras-chave |
+| `src/history.js` | Persistência do histórico |
+| `src/rateLimit.js` | Janela de requisições por chat |
+| `knowledge/` | Referências locais |
+| `scripts/test-chat.js` | Conversa no terminal com a API real |
+| `test/core.test.js` | Testes locais sem API |
+| `dnd-bot.service` | Exemplo de serviço systemd |
 
-## Estrutura do projeto
+## Executar localmente
 
-```
-dnd5e-telegram-bot/
-├── index.js                 # ponto de entrada
-├── src/
-│   ├── telegram.js           # conexão com o Telegram (long polling) e roteamento
-│   ├── ai.js                 # chamada à API da Groq + persona/system prompt
-│   ├── knowledge.js          # recuperação de contexto (mini-RAG por palavra-chave)
-│   ├── history.js             # memória de conversa por chat, persistida em data/history.json
-│   └── rateLimit.js           # limite de mensagens por minuto por conversa
-├── knowledge/                 # base de conhecimento de D&D 5e
-├── scripts/test-chat.js       # testa a IA no terminal, sem precisar do Telegram
-└── dnd-bot.service            # exemplo de serviço systemd
-```
-
-## 1. Criar o bot no Telegram (2 minutos)
-
-1. No Telegram, procure por **@BotFather** (o de selo azul de verificado).
-2. Mande `/newbot`.
-3. Escolha um **nome de exibição** (ex: `Mestre D&D 5e`).
-4. Escolha um **username** único terminando em `bot` (ex: `MestreDnD5eBot`).
-5. O BotFather responde com o **token** do bot (formato `123456789:AAH...`). Guarde-o — é a "senha" do bot.
-
-## 2. Criar a chave de API gratuita da Groq (2 minutos)
-
-1. Acesse [console.groq.com/keys](https://console.groq.com/keys) e entre com uma conta Google/GitHub/e-mail.
-2. Clique em **Create API Key**, dê um nome (ex: `dnd-bot`) e copie a chave gerada (começa com `gsk_...`). Guarde-a — ela só aparece uma vez.
-3. Não é pedido cartão de crédito em nenhum momento.
-
-## 3. Configurar e testar
+O projeto declara Node.js 18 ou superior em `package.json`. Para uso contínuo, escolha uma versão com suporte de segurança e valide as dependências nela.
 
 ```bash
+git clone https://github.com/jessicafmaximiano/bot-rpg.git
+cd bot-rpg
 npm install
 cp .env.example .env
-# edite .env: cole o TELEGRAM_BOT_TOKEN e a GROQ_API_KEY
-npm start
 ```
 
-No Telegram, procure o username do seu bot, abra a conversa e mande `/start`. Ele deve responder com a mensagem de ajuda.
+No Windows, copie `.env.example` para `.env` pelo explorador ou pelo comando equivalente.
 
-Para testar só a IA no terminal (sem Telegram): `npm run chat`.
+1. Crie o bot pelo BotFather e preencha `TELEGRAM_BOT_TOKEN`.
+2. Obtenha uma chave da Groq e preencha `GROQ_API_KEY`.
+3. Confira se o modelo configurado está disponível na conta.
+4. Para restringir o acesso, preencha `TELEGRAM_ALLOWED_IDS` com os IDs autorizados.
+5. Execute `npm start` e envie `/start` ao bot.
 
-## 4. Restringir o bot só a você
+Preços, cotas e disponibilidade de modelos dependem do provedor. Usar a API oficial do Telegram não elimina limites ou possíveis restrições de conta.
 
-Qualquer pessoa que descobrir o username do bot pode conversar com ele — a menos que você preencha `TELEGRAM_ALLOWED_IDS`. Para descobrir seu ID:
+## Configuração
 
-1. Rode o bot e mande qualquer mensagem para ele.
-2. No log do servidor aparece: `Mensagem de @seuusuario (id 123456789): ...`
-3. Copie esse número para o `.env`: `TELEGRAM_ALLOWED_IDS=123456789`
-4. Reinicie o bot. Mensagens de qualquer outra pessoa passam a ser ignoradas (ficam só registradas no log).
+| Variável | Uso | Padrão |
+| --- | --- | --- |
+| `TELEGRAM_BOT_TOKEN` | Token do bot | Obrigatório |
+| `GROQ_API_KEY` | Chave da Groq | Obrigatória |
+| `GROQ_MODEL` | Modelo solicitado | Consulte `src/ai.js` e `.env.example` |
+| `TELEGRAM_ALLOWED_IDS` | IDs separados por vírgula | Vazio permite qualquer usuário |
+| `RATE_LIMIT_PER_MINUTE` | Limite positivo por conversa | 15 |
+| `HISTORY_TURNS` | Quantidade positiva de trocas retidas | 8 |
 
-Para autorizar mais pessoas no futuro (amigos da mesa, clientes), adicione os IDs separados por vírgula.
+## Comandos
 
-## 5. Deploy contínuo (24/7) na Oracle Cloud
+- `/start` e `/ajuda`: instruções de uso.
+- `/limpar`: remove o histórico do chat.
+- Texto livre: solicita uma resposta à IA.
 
-O bot não abre nenhuma porta de rede (só faz conexões de saída para o Telegram e para a API da Groq), então não é preciso mexer em firewall/Security Lists.
+O histórico é separado por **chat**, não por usuário dentro de um grupo. Participantes de um mesmo grupo compartilham esse contexto.
+
+## Testes
 
 ```bash
-sudo cp dnd-bot.service /etc/systemd/system/dnd-bot.service
-sudo systemctl daemon-reload
-sudo systemctl enable dnd-bot
-sudo systemctl start dnd-bot
+npm test
 ```
 
-Logs: `sudo journalctl -u dnd-bot -f` — status: `sudo systemctl status dnd-bot`.
+Usam apenas módulos nativos do Node.js; não precisam de `npm install`, tokens ou rede. Cobrem limite por chat, reinício da janela aos 60 segundos, configuração inválida, retenção de turnos, isolamento entre chats e persistência após limpeza. Os arquivos de teste são temporários e não usam o histórico real.
 
-## Configuração (.env)
+`npm run chat` é um teste manual com a API real da Groq e pode consumir cota. Os testes locais não validam Telegram, Groq ou controle de acesso ponta a ponta.
 
-| Variável | O que faz | Padrão |
-|---|---|---|
-| `TELEGRAM_BOT_TOKEN` | Token do bot gerado pelo @BotFather (obrigatório) | — |
-| `GROQ_API_KEY` | Chave de API gratuita da Groq, sem cartão (obrigatória) | — |
-| `GROQ_MODEL` | Modelo Groq usado para gerar respostas | `llama-3.3-70b-versatile` |
-| `TELEGRAM_ALLOWED_IDS` | IDs de usuário autorizados (vazio = qualquer um) | vazio |
-| `RATE_LIMIT_PER_MINUTE` | Máximo de mensagens por minuto por conversa | `15` |
-| `HISTORY_TURNS` | Quantas trocas de contexto manter por conversa | `8` |
+## Recuperação de contexto e limitações
 
-## Comandos do bot
+A busca é lexical: normaliza acentos, conta palavras-chave e seleciona referências. Não usa embeddings nem banco vetorial. O orçamento de 7.000 caracteres no código conta o conteúdo dos arquivos, não os títulos e instruções adicionados ao prompt. Um arquivo que exceda o orçamento restante é descartado.
 
-- Qualquer mensagem de texto livre → vai para a IA.
-- `/start` ou `/ajuda` → mostra exemplos de uso.
-- `/limpar` → apaga o histórico daquela conversa.
+As referências locais e a resposta do modelo podem conter imprecisões. A seleção de contexto não garante correção nem substitui a conferência das regras.
 
-## Como o bot usa a base de conhecimento
+A persistência usa JSON e troca atômica do arquivo em um único processo. Não execute várias instâncias apontando para o mesmo histórico. A escrita síncrona pode bloquear brevemente o processo quando o histórico cresce. Falhas de disco são registradas no console; ainda não há banco de dados, fila ou política automática de retenção de chats inativos.
 
-A pasta `knowledge/` tem material de referência de D&D 5e (tabelas de XP/CR, condições oficiais, raças/classes, itens mágicos, etc.). A cada mensagem, `src/knowledge.js` faz uma busca por palavra-chave para escolher até 3 arquivos relevantes e injeta o conteúdo no contexto enviado à IA — assim as respostas ficam embasadas nas regras reais.
+## Implantação
 
-## Vender/expandir no futuro
+O arquivo `dnd-bot.service` é um exemplo. Ajuste usuário, diretório e caminho do Node antes de instalar o serviço. O bot usa long polling e precisa de saída de rede para Telegram e Groq. Mantenha apenas uma instância consumindo o mesmo token.
 
-Diferente do WhatsApp, no Telegram isso é simples: cada cliente pode ter acesso ao **mesmo bot** (basta adicionar o ID dele em `TELEGRAM_ALLOWED_IDS` — o histórico já é isolado por conversa), ou você pode criar **um bot separado por cliente** no @BotFather (cada um com seu token) e rodar múltiplas instâncias do projeto. Nenhuma mudança de arquitetura é necessária.
+## Privacidade
 
-## Customização
+Não versione `.env` nem `data/`. As mensagens são enviadas à Groq e o histórico fica no disco. O código também registra IDs e trechos de mensagens no console. Use conversas de teste sem dados sensíveis e restrinja o acesso aos arquivos e logs.
 
-- **Persona/tom de resposta**: edite `SYSTEM_PROMPT` em `src/ai.js`.
-- **Novos temas de conhecimento**: adicione arquivos em `knowledge/` e registre as palavras-chave em `src/knowledge.js` (`KNOWLEDGE_MAP`).
+## Evolução planejada
+
+Testes de autorização e falhas de API, fila por chat, redução de dados nos logs e persistência adequada a múltiplas instâncias são próximos passos; não estão cobertos nesta versão.
